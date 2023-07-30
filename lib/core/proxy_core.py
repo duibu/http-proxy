@@ -3,6 +3,8 @@ import select
 import time
 import _thread as thread
 from lib.parse.http_package import HttpRequestPacket
+from lib.core import extends
+from lib.core.log import logger
 
 
 def debug(tag, msg):
@@ -11,28 +13,22 @@ def debug(tag, msg):
 #简单的HTTP代理
 class HttpProxy(object):
 
-    #   初始化代理套接字，用于与客户端、服务端通信
-
-    #    参数：host 监听地址，默认0.0.0.0，代表本机任意ipv4地址
-    #    参数：port 监听端口，默认8080
-    #    参数：listen 监听客户端数量，默认10
-    #    参数：bufsize 数据传输缓冲区大小，单位kb，默认8kb
-    #    参数：delay 数据转发延迟，单位ms，默认1ms
     def __init__(self, host='127.0.0.1', port=8080, listen=10, bufsize=8, delay=1):
         
         self.socket_proxy = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket_proxy.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # 将SO_REUSEADDR标记为True, 当socket关闭后，立刻回收该socket的端口
+        # 将SO_REUSEADDR标记为True, 当socket关闭后，立刻回收该socket的端口
+        self.socket_proxy.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
         self.socket_proxy.bind((host, port))
         self.socket_proxy.listen(listen)
 
         self.socket_recv_bufsize = bufsize*1024
         self.delay = delay/1000.0
 
-        debug('info', 'bind=%s:%s' % (host, port))
-        debug('info', 'listen=%s' % listen)
-        debug('info', 'bufsize=%skb, delay=%sms' % (bufsize, delay))
+        logger.info('bind=%s:%s' % (host, port))
+        logger.info('listen=%s' % listen)
+        logger.info('bufsize=%skb, delay=%sms' % (bufsize, delay))
 
-    def __del__(self):
+    def delete(self):
         self.socket_proxy.close()
     
     def connect(self, host, port):
@@ -46,23 +42,19 @@ class HttpProxy(object):
         return tmp_socket
          
     def proxy(self, socket_client):
-        '''
-        代理核心程序
-
-        参数：socket_client 代理端与客户端之间建立的套接字
-        '''
         # 接收客户端请求数据
         req_data = socket_client.recv(self.socket_recv_bufsize)
-        print(req_data)
+
         if req_data == b'':
             return
 
         # 解析http请求数据
         http_packet = HttpRequestPacket(req_data)
-        print(http_packet.req_line)
-        CUSTOM_HEADERS = {'X-Custom-Header': 'proxy'}
-        req_data = req_data.decode().replace('\r\n\r\n', '\r\n'+'\r\n'.join('%s: %s' % (k,v) for k,v in CUSTOM_HEADERS.items())+'\r\n\r\n')
-        print('host', http_packet.host)
+        custom_headers = extends.header(header=http_packet.headers,data=http_packet.req_data)
+
+        if custom_headers:
+            logger.info('自定义Header -> [%s]' % custom_headers)
+            req_data = req_data.decode().replace('\r\n\r\n', '\r\n'+'\r\n'.join('%s: %s' % (k,v) for k,v in custom_headers.items())+'\r\n\r\n')
         # 获取服务端host、port
         if b':' in http_packet.host:
             server_host, server_port = http_packet.host.split(b':')
@@ -80,17 +72,15 @@ class HttpProxy(object):
         self.nonblocking(socket_client, socket_server)
 
     #异步数据处理
-    #socket_client 代理端与客户端之间建立的套接字
-    #socket_server 代理端与服务端之间建立的套接字
     def nonblocking(self, socket_client, socket_server):
-        _rlist = [socket_client, socket_server]
+        socket_list = [socket_client, socket_server]
         is_recv = True
         while is_recv:
             try:
-                rlist, _, elist = select.select(_rlist, [], [], 2)
+                socket_list, _, elist = select.select(socket_list, [], [], 2)
                 if elist:
                     break
-                for tmp_socket in rlist:
+                for tmp_socket in socket_list:
                     is_recv = True
                     # 接收数据
                     data = tmp_socket.recv(self.socket_recv_bufsize)
@@ -128,7 +118,6 @@ class HttpProxy(object):
     def start(self):
         while True:
             try:
-                # self.handle_client_request(self.client_socket_accept())
                 thread.start_new_thread(self.handle_client_request, (self.client_socket_accept(), ))
             except KeyboardInterrupt:
                 break

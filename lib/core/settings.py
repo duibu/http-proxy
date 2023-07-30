@@ -11,7 +11,7 @@ TYPE = "dev" if VERSION.count('.') > 2 and VERSION.split('.')[-1] != '0' else "s
 
 TYPE_COLORS = {"dev": 33, "stable": 90, "pip": 34}
 
-BANNER = """\033[01;33m\  
+BANNER = """\033[01;33m
   _ __  _ __ _____  ___   _ 
  | '_ \| '__/ _ \ \/ / | | |            \033[01;37m{\033[01;%dm%s\033[01;37m}\033[01;33m
  | |_) | | | (_) >  <| |_| |
@@ -29,4 +29,6 @@ IS_LINUX = OS_NAME == "Linux"
 
 ABS_PATH = os.path.dirname(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 
-DEFAULT_DOWNLOAD_PATH = ABS_PATH + os.sep + 'data'
+DEFAULT_EXTENDS_PATH = ABS_PATH + os.sep + 'extends'
+
+DEFAULT_CONFIG_PATH = ABS_PATH + os.sep + 'config'
