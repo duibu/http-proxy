@@ -6,10 +6,6 @@ from lib.parse.http_package import HttpRequestPacket
 from lib.core import extends
 from lib.core.log import logger
 
-
-def debug(tag, msg):
-    print('[%s] %s' % (tag, msg))
-
 #简单的HTTP代理
 class HttpProxy(object):
 
