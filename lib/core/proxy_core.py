@@ -12,7 +12,6 @@ class HttpProxy(object):
     def __init__(self, host='127.0.0.1', port=8080, listen=10, bufsize=8, delay=1):
         
         self.socket_proxy = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # 将SO_REUSEADDR标记为True, 当socket关闭后，立刻回收该socket的端口
         self.socket_proxy.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
         self.socket_proxy.bind((host, port))
         self.socket_proxy.listen(listen)
@@ -28,44 +27,44 @@ class HttpProxy(object):
         self.socket_proxy.close()
     
     def connect(self, host, port):
-
-        (family, sockettype, _, _, target_addr) = socket.getaddrinfo(host, port)[0]
-        
-        tmp_socket = socket.socket(family, sockettype)
-        tmp_socket.setblocking(0)
-        tmp_socket.settimeout(5)
-        tmp_socket.connect(target_addr)
-        return tmp_socket
+        (schema, socket_type, _, _, target_address) = socket.getaddrinfo(host, port)[0]
+        connect_socket = socket.socket(schema, socket_type)
+        connect_socket.setblocking(0)
+        connect_socket.settimeout(50000)
+        connect_socket.connect(target_address)
+        return connect_socket
          
     def proxy(self, socket_client):
-        # 接收客户端请求数据
+
         req_data = socket_client.recv(self.socket_recv_bufsize)
 
         if req_data == b'':
             return
 
         # 解析http请求数据
-        http_packet = HttpRequestPacket(req_data)
-        custom_headers = extends.header(header=http_packet.headers,data=http_packet.req_data)
+        http_info = HttpRequestPacket(req_data)
+        custom_headers = extends.header(header=http_info.headers,data=http_info.req_data)
 
         if custom_headers:
             logger.info('自定义Header -> [%s]' % custom_headers)
-            req_data = req_data.decode().replace('\r\n\r\n', '\r\n'+'\r\n'.join('%s: %s' % (k,v) for k,v in custom_headers.items())+'\r\n\r\n')
-        # 获取服务端host、port
-        if b':' in http_packet.host:
-            server_host, server_port = http_packet.host.split(b':')
+            req_data = req_data.decode().replace('\r\n\r\n', '\r\n'+'\r\n'.join('%s: %s' % (k,v) for k,v in custom_headers.items())+'\r\n\r\n', 1)
+
+        if b':' in http_info.host:
+            server_host, server_port = http_info.host.split(b':')
         else:
-            server_host, server_port = http_packet.host, 80
+            server_host, server_port = http_info.host, 80
+
+        u = b'%s//%s' % (http_info.req_uri.split(b'//')[0], http_info.host)
+        req_data = req_data.replace(u.decode(), '', 1)
 
         # HTTP
-        if http_packet.method in [b'GET', b'POST', b'PUT', b'DELETE', b'HEAD']:
-            # 建立连接
-            socket_server = self.connect(server_host, server_port) 
-            # 将客户端请求数据发给服务端
+        if http_info.method in [b'GET', b'POST', b'PUT', b'DELETE', b'HEAD']:
+
+            socket_server = self.connect(server_host, server_port)
             socket_server.send(req_data.encode())
 
-        # 使用select异步处理，不阻塞
         self.nonblocking(socket_client, socket_server)
+
 
     #异步数据处理
     def nonblocking(self, socket_client, socket_server):
@@ -76,26 +75,27 @@ class HttpProxy(object):
                 socket_list, _, elist = select.select(socket_list, [], [], 2)
                 if elist:
                     break
-                for tmp_socket in socket_list:
+                for this_socket in socket_list:
                     is_recv = True
                     # 接收数据
-                    data = tmp_socket.recv(self.socket_recv_bufsize)
+                    data = this_socket.recv(self.socket_recv_bufsize)
                     if data == b'':
                         is_recv = False
                         continue
-                    
+
                     # socket_client状态为readable, 当前接收的数据来自客户端
-                    if tmp_socket is socket_client: 
-                        # 将客户端请求数据发往服务端
+                    if this_socket is socket_client: 
+                        print('client -> server')
                         socket_server.send(data)
 
                     # socket_server状态为readable, 当前接收的数据来自服务端
-                    elif tmp_socket is socket_server:
-                        # 将服务端响应数据发往客户端
+                    elif this_socket is socket_server:
+                        print('server -> client')
                         socket_client.send(data)
 
                 time.sleep(self.delay) 
             except Exception as e:
+                print(e)
                 break
 
         socket_client.close()
@@ -114,6 +114,6 @@ class HttpProxy(object):
     def start(self):
         while True:
             try:
-                thread.start_new_thread(self.handle_client_request, (self.client_socket_accept(), ))
+                thread.start_new_thread(self.handle_client_request, (self.client_socket_accept(),))
             except KeyboardInterrupt:
                 break
