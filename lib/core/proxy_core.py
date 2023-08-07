@@ -30,7 +30,7 @@ class HttpProxy(object):
         (schema, socket_type, _, _, target_address) = socket.getaddrinfo(host, port)[0]
         connect_socket = socket.socket(schema, socket_type)
         connect_socket.setblocking(0)
-        connect_socket.settimeout(50000)
+        connect_socket.settimeout(5)
         connect_socket.connect(target_address)
         return connect_socket
          
