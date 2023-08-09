@@ -25,7 +25,7 @@ def cmdLineParser(argv=None):
             help="缓存区大小,默认8kb  (e.g. 8)")
         
         parser.add_argument("--delay", dest="delay", type = int, default = 1,
-            help="延时时间,单位ms,默认8ms  (e.g. 8)")
+            help="延时时间,单位ms,默认1ms  (e.g. 1)")
 
         args = parser.parse_args()
 
