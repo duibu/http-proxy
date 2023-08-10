@@ -1,5 +1,5 @@
 # http-proxy
-[![Python 3.x](https://img.shields.io/badge/python-3.x-yellow.svg)](https://www.python.org/) [![License](https://img.shields.io/badge/license-MIT-red.svg)](https://raw.githubusercontent.com/duibu/downloader/main/LICENSE) 
+[![Python 3.x](https://img.shields.io/badge/python-3.x-yellow.svg)](https://www.python.org/) [![License](https://img.shields.io/badge/license-Apache_2.0-red.svg)](https://raw.githubusercontent.com/duibu/http-proxy/main/LICENSE) 
 
 ```bash
   _ __  _ __ _____  ___   _ 
@@ -20,7 +20,7 @@ python:3.x
 使用git下载代码
 
 ```bash
-git clone https://github.com/duibu/downloader.git
+git clone https://github.com/duibu/http-proxy.git
 ```
 
 ## 参数说明
@@ -29,6 +29,6 @@ git clone https://github.com/duibu/downloader.git
 --host: IP地址，默认是127.0.0.1
 --port: 代理服务端口，默认是8372
 --listen: 监听客户端数量，默认是10
-----buf: 缓冲区大小，默认8kb
+--buf: 缓冲区大小，默认8kb
 --delay: 延迟时间，默认1ms
 ```
