@@ -66,31 +66,29 @@ class HttpProxy(object):
         self.nonblocking(socket_client, socket_server)
 
 
-    #异步数据处理
+    #异步处理
     def nonblocking(self, socket_client, socket_server):
-        socket_list = [socket_client, socket_server]
+        in_list = [socket_client, socket_server]
         is_recv = True
         while is_recv:
             try:
-                socket_list, _, elist = select.select(socket_list, [], [], 2)
+                socket_list, _, elist = select.select(in_list, [], [], 2)
                 if elist:
                     break
                 for this_socket in socket_list:
                     is_recv = True
-                    # 接收数据
+                    
                     data = this_socket.recv(self.socket_recv_bufsize)
                     if data == b'':
                         is_recv = False
                         continue
 
-                    # socket_client状态为readable, 当前接收的数据来自客户端
-                    if this_socket is socket_client: 
-                        print('client -> server')
+                    # client -> server
+                    if this_socket is socket_client:
                         socket_server.send(data)
 
-                    # socket_server状态为readable, 当前接收的数据来自服务端
+                    # server -> client
                     elif this_socket is socket_server:
-                        print('server -> client')
                         socket_client.send(data)
 
                 time.sleep(self.delay) 
