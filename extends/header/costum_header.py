@@ -4,7 +4,12 @@ from lib.core.common import file_is_exits
 from lib.core.log import logger
 
 def inject_headers(header = {}, data = None):
-    return config()
+    costum = config()
+    for key in list(costum.keys()):
+        if key.encode() in header:
+            del costum[key]
+            continue
+    return costum
 
 def inject_request():
     #TODO
