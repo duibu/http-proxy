@@ -9,7 +9,7 @@ from lib.core.log import logger
 #简单的HTTP代理
 class HttpProxy(object):
 
-    def __init__(self, host='127.0.0.1', port=8080, listen=10, bufsize=8, delay=1):
+    def __init__(self, host='127.0.0.1', port=8372, listen=10, bufsize=8, delay=1):
         
         self.socket_proxy = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket_proxy.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
@@ -35,33 +35,32 @@ class HttpProxy(object):
         return connect_socket
          
     def proxy(self, socket_client):
+        request_data = socket_client.recv(self.socket_recv_bufsize)
 
-        req_data = socket_client.recv(self.socket_recv_bufsize)
-
-        if req_data == b'':
+        if request_data == b'':
             return
 
         # 解析http请求数据
-        http_info = HttpRequestPacket(req_data)
-        custom_headers = extends.header(header=http_info.headers,data=http_info.req_data)
+        http_info = HttpRequestPacket(request_data)
+        custom_headers = extends.header(header=http_info.headers,data=http_info.request_data)
 
         if custom_headers:
             logger.info('自定义Header -> [%s]' % custom_headers)
-            req_data = req_data.decode().replace('\r\n\r\n', '\r\n'+'\r\n'.join('%s: %s' % (k,v) for k,v in custom_headers.items())+'\r\n\r\n', 1)
+            request_data = request_data.decode().replace('\r\n\r\n', '\r\n'+'\r\n'.join('%s: %s' % (k,v) for k,v in custom_headers.items())+'\r\n\r\n', 1)
 
         if b':' in http_info.host:
             server_host, server_port = http_info.host.split(b':')
         else:
             server_host, server_port = http_info.host, 80
 
-        u = b'%s//%s' % (http_info.req_uri.split(b'//')[0], http_info.host)
-        req_data = req_data.replace(u.decode(), '', 1)
+        u = b'%s//%s' % (http_info.request_uri.split(b'//')[0], http_info.host)
+        request_data = request_data.replace(u.decode(), '', 1)
 
         # HTTP
         if http_info.method in [b'GET', b'POST', b'PUT', b'DELETE', b'HEAD']:
 
             socket_server = self.connect(server_host, server_port)
-            socket_server.send(req_data.encode())
+            socket_server.send(request_data.encode())
 
         self.nonblocking(socket_client, socket_server)
 
