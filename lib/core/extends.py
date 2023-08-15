@@ -11,9 +11,10 @@ def header(header = {}, data = None):
                 current_script = script
                 header_dict = common.get_value("extendinfo_dict")[script].inject_headers(header, data)
                 if header_dict and isinstance(header_dict, dict):
+                    logger.info('[%s]脚本返回的header内容 -> [%s]' % (script, header_dict))
                     result.update(header_dict)
                 else:
-                    logger.error('%s脚本返回的header错误' % script)
+                    logger.error('[%s]脚本返回的header不是dict类型的数据' % script)
         except Exception as e:
             logger.error('扩展脚本 [%s] 出现错误 -> [%s]' % (current_script, e))
     return result
