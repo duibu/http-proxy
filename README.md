@@ -60,3 +60,8 @@ http-proxy统一要求python3编写，具有inject_headers函数进行自定义�
         return data
     ```
 
+## License
+
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+Licensed under the [Apache License](LICENSE) license.
